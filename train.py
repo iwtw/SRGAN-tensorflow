@@ -16,6 +16,7 @@ learn_rate2=0.1**v2
 batch_size=32
 H = 28 
 W = 24
+k=5
 filenames='data.txt.aa'
 if( len ( sys.argv ) == 1 ):
     name =""
@@ -55,15 +56,15 @@ gen_var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
 dbatch=tf.concat([tf.cast(minibatch,tf.float32),result],0)
 vgg=vgg19.Vgg19()
 vgg.build(dbatch)
-fmap=tf.split(vgg.conv5_4,2)
+fmap=tf.split(vgg.conv2_2,2)
 content_loss=tf.losses.mean_squared_error(fmap[0],fmap[1])
 
 disc=discriminator.Discriminator(dbatch)
 D_x,D_G_z=tf.split(tf.squeeze(disc.dense2),2)   
 
-adv_loss=tf.reduce_mean(tf.square(D_G_z-1.0))
-gen_loss=(adv_loss+content_loss)
-disc_loss=(tf.reduce_mean(tf.square(D_x-1.0)+tf.square(D_G_z)))
+adv_loss=tf.reduce_mean( tf.log( 1.0 - D_G_z ) )
+gen_loss= 1e-3 * adv_loss + content_loss
+disc_loss=(tf.reduce_mean(tf.log(1.0-D_x)+tf.log(D_G_z)))
 
 disc_var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
 for x in gen_var_list:
@@ -96,7 +97,6 @@ with tf.Session(config=config) as sess:
 #    print("start queue done")
 #    print(sess.run(gen_var_list))
 
-    assert 1==2
     endpoint1 = steps_per_epoch * num_epoch1
     endpoint2 = steps_per_epoch * num_epoch2
 
@@ -112,7 +112,8 @@ with tf.Session(config=config) as sess:
                 f.write(s+'\n')
                 f.close()
                 save()
-            sess.run(disc_step)
+            for i in xrange(k)
+                sess.run(disc_step)
             sess.run(gen_step)
             if(step()%steps_per_epoch==0):
                 output.outputdata(step()/steops_per_epoch , batch_size , filename , save_file , './trainingoutput/'+name+'/')
