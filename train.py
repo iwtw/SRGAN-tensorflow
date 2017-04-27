@@ -4,42 +4,46 @@ import srResNet
 import discriminator
 import time
 import random
+import sys
 import os 
+import output as output
 from utils import *
 
 v1=3
 v2=5
 learn_rate1=0.1**v1
 learn_rate2=0.1**v2
-batch_size=16
-resolution=64
-flags='b'+str(batch_size)+'_r'+str(resolution)+'_v'+str(v1)+'and'+str(v2)+'_leaky_tanh'# 'v' means learning_rate
-filenames='r256-512.bin'
-srResNet_path='./save/srResNet_b16_r64_v0.001_leaky_tanh/srResNet4x.ckpt'
-log_steps=50
-endpoint1=100000
-endpoint2=200000
-
-save_path='save/srgan_'+flags
-if not os.path.exists(save_path):
-    os.mkdir(save_path)
-
+batch_size=32
+H = 28 
+W = 24
+filenames='data.txt.aa'
+if( len ( sys.argv ) == 1 ):
+    name =""
+else:
+    name = sys.argv[1]
+srResNet_path='./save/srResNet'+name+'/'+"srResNet"
+log_steps=100
+num_epoch1=10
+num_epoch2=20
+save_path='save/srGAN'+name+'/'+"srGAN"
 def read(filenames):
-    file_names=open(filenames,'rb').read().split('\n')
+    file_names=open(filenames,'r').read().split('\n')
+    file_names.pop( len(file_names) -1 )
+    steps_per_epoch = len(file_names) / batch_size
     random.shuffle(file_names)
-    filename_queue=tf.train.string_input_producer(file_names,capacity=1000,num_epochs=100)
+    filename_queue=tf.train.string_input_producer(file_names)
     reader=tf.WholeFileReader()
     _,value=reader.read(filename_queue)
     image=tf.image.decode_jpeg(value)
-    cropped=tf.random_crop(image,[resolution*4,resolution*4,3])
+    cropped=tf.random_crop(image,[ H *4, W*4,3])
     random_flipped=tf.image.random_flip_left_right(cropped)
     minibatch=tf.train.batch([random_flipped],batch_size,capacity=300)
-    rescaled=tf.image.resize_bicubic(minibatch,[resolution,resolution])/127.5-1
-    return minibatch,rescaled
+    rescaled=tf.image.resize_bicubic(minibatch,[ H , W ])/127.5-1
+    return steps_per_epoch , minibatch,rescaled
 
  
 with tf.device('/cpu:0'):
-    minibatch,rescaled=read(filenames)
+    steps_per_epoch,minibatch,rescaled=read(filenames)
 resnet=srResNet.srResNet(rescaled)
 result=(resnet.conv5+1)*127.5
 gen_var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
@@ -53,9 +57,11 @@ content_loss=tf.losses.mean_squared_error(fmap[0],fmap[1])
 
 disc=discriminator.Discriminator(dbatch)
 D_x,D_G_z=tf.split(tf.squeeze(disc.dense2),2)   
+
 adv_loss=tf.reduce_mean(tf.square(D_G_z-1.0))
 gen_loss=(adv_loss+content_loss)
 disc_loss=(tf.reduce_mean(tf.square(D_x-1.0)+tf.square(D_G_z)))
+
 disc_var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
 for x in gen_var_list:
     disc_var_list.remove(x)
@@ -66,22 +72,30 @@ gen_train_step1=tf.train.AdamOptimizer(learn_rate1).minimize(gen_loss,global_ste
 disc_train_step1=tf.train.AdamOptimizer(learn_rate1).minimize(disc_loss,global_step,disc_var_list)
 #disc_train_step2=tf.train.AdamOptimizer(learn_rate2).minimize(disc_loss,global_step)
 
-with tf.Session() as sess:
-    if not os.path.exists(save_path+'srgan.ckpt.meta'):
+config = tf.ConfigProto(allow_soft_placement=True , log_device_placement=False )
+config.gpu_options.allow_growth=True
+with tf.Session(config=config) as sess:
+    if not os.path.exists(save_path+'.meta'):
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         loader = tf.train.Saver(var_list=gen_var_list)
         loader.restore(sess,srResNet_path)
         saver=tf.train.Saver(var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
-        saver.save(sess,save_path+'/srgan.ckpt')
+        saver.save(sess,save_path)
         print('saved')
     saver=tf.train.Saver(var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
-    saver.restore(sess,save_path+'/srgan.ckpt')
+    saver.restore(sess,save_path)
     def save():
-        saver.save(sess,save_path+'/srgan.ckpt')
+        saver.save(sess,save_path)
     sess.run(tf.local_variables_initializer())
     step=global_step.eval
     tf.train.start_queue_runners()
+#    print("start queue done")
+#    print(sess.run(gen_var_list))
+
+    assert 1==2
+    endpoint1 = steps_per_epoch * num_epoch1
+    endpoint2 = steps_per_epoch * num_epoch2
 
     def train(endpoint,gen_step,disc_step):
         while step()<=endpoint:
@@ -89,7 +103,7 @@ with tf.Session() as sess:
                 d_batch=dbatch.eval()
                 mse,psnr=batch_mse_psnr(d_batch)
                 ssim=batch_ssim(d_batch)
-                s=time.strftime('%Y-%m-%d %H:%M:%S:',time.localtime(time.time()))+'step='+str(step())+' mse='+str(mse)+' psnr='+str(psnr)+' ssim='+str(ssim)+' gen_loss='+str(gen_loss.eval())+' disc_loss='+str(disc_loss.eval())
+                s=time.strftime('%Y-%m-%d %H:%M:%S:',time.localtime(time.time()))+"epoch="+str(step() / steps_per_epoch + 1 )+'step='+str(step())+' mse='+str(mse)+' psnr='+str(psnr)+' ssim='+str(ssim)+' gen_loss='+str(gen_loss.eval())+' disc_loss='+str(disc_loss.eval())
                 print(s)
                 f=open('info.train_'+flags,'a')
                 f.write(s+'\n')
@@ -97,6 +111,8 @@ with tf.Session() as sess:
                 save()
             sess.run(disc_step)
             sess.run(gen_step)
+            if(step()%steps_per_epoch==0):
+                output.outputdata(step()/steops_per_epoch , batch_size , filename , save_path , './trainingoutput/'+name+'/')
     train(endpoint1,gen_train_step1,disc_train_step1)
   #  train(endpoint2,gen_train_step2,disc_train_step2)
     print('trainning finished')
