@@ -16,12 +16,18 @@ r = 4
 filenames='data.txt.aa' #put images' paths to this file,one image path for each row,e.g. ./data/123.JPEG, or define another way of loading images in read()
 log_steps=100 #interval to save the model parameters
 num_epoch=15
-name = sys.argv[1]
+
+if len(sys.argv)==1:
+    name =""
+else:
+    name = sys.argv[1]
+output_path="./pretraining_output/"+name
 
 
 if not os.path.exists('save'):
     os.mkdir('save')
-
+if not os.path.exists(output_path):
+    os.mkdir(output_path)
 
 save_path='save/srResNet'+name
 save_file=save_path+'/srResNet'
@@ -81,20 +87,28 @@ with tf.Session(config=config) as sess:
 
     total_steps = steps_per_epoch * num_epoch
     
-    while step()<=total_steps:
-        if(step()%log_steps==0 ):
-            d_batch=dbatch.eval()
-            mse,psnr=batch_mse_psnr(d_batch)
-            ypsnr=batch_y_psnr(d_batch)
-            ssim=batch_ssim(d_batch)
-            s=time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))+' epoch:'+str(step()/steps_per_epoch+1)+':step '+str(step())+' mse:'+str(mse)+' psnr:'+str(psnr)+' ssim:'+str(ssim)+' y_psnr='+str(ypsnr)  
-            print(s)
-            f=open('info.pretrain_'+flags,'a')
-            f.write(s+'\n')
-            f.close()
-            save()
-        if(step()%steps_per_epoch==0):
-            output.outputdata(step()/steps_per_epoch , batch_size , filenames ,  save_file , './pretrainingoutput/'+name+'/')
-        sess.run(train_step)
+    try :
+        while step()<=total_steps:
+            sess.run(train_step)
+            if(step()%log_steps==0 ):
+                d_batch=dbatch.eval()
+                mse,psnr=batch_mse_psnr(d_batch)
+                ypsnr=batch_y_psnr(d_batch)
+                ssim=batch_ssim(d_batch)
+                s=time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))+' epoch:'+str(step()/steps_per_epoch+1)+':step '+str(step())+' mse:'+str(mse)+' psnr:'+str(psnr)+' ssim:'+str(ssim)+' y_psnr='+str(ypsnr)  
+                print(s)
+                f=open('info.pretrain_'+name,'a')
+                f.write(s+'\n')
+                f.close()
+                save()
+            if(step()%steps_per_epoch==0):
+                output.outputdata(step()/steps_per_epoch , batch_size , filenames ,  save_file , output_path+'/')
+    except tf.errors.OutOfRangeError:
+        print('[INFO] train finished')
+        save()
+    except KeyboardInterrupt:
+        print('[INFO] KeyboardInterrupt')
+        save()
+        print('[INFO] checkpoint save done')
 
 print('done')

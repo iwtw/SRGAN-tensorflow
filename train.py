@@ -28,8 +28,11 @@ num_epoch1=10
 num_epoch2=20
 save_path='save/srGAN'+name
 save_file=save_path+'/srGAN'
+output_path='./training_output/'+name
 if not os.path.exists(save_path):
     os.mkdir(save_path)
+if not os.path.exists(output_path):
+    os.mkdir(output_path)
 def read(filenames):
     file_names=open(filenames,'r').read().split('\n')
     file_names.pop( len(file_names) -1 )
@@ -101,22 +104,30 @@ with tf.Session(config=config) as sess:
     endpoint2 = steps_per_epoch * num_epoch2
 
     def train(endpoint,gen_step,disc_step):
-        while step()<=endpoint:
-            if(step()%log_steps==0):
-                d_batch=dbatch.eval()
-                mse,psnr=batch_mse_psnr(d_batch)
-                ssim=batch_ssim(d_batch)
-                s=time.strftime('%Y-%m-%d %H:%M:%S:',time.localtime(time.time()))+"epoch="+str(step() / steps_per_epoch + 1 )+'step='+str(step())+' mse='+str(mse)+' psnr='+str(psnr)+' ssim='+str(ssim)+' gen_loss='+str(gen_loss.eval())+' disc_loss='+str(disc_loss.eval())
-                print(s)
-                f=open('info.train_'+flags,'a')
-                f.write(s+'\n')
-                f.close()
-                save()
-            for i in xrange(k)
-                sess.run(disc_step)
-            sess.run(gen_step)
-            if(step()%steps_per_epoch==0):
-                output.outputdata(step()/steops_per_epoch , batch_size , filename , save_file , './trainingoutput/'+name+'/')
+        try:
+            while step()<=endpoint:
+                for i in xrange(k)
+                    sess.run(disc_step)
+                sess.run(gen_step)
+                if(step()%log_steps==0):
+                    d_batch=dbatch.eval()
+                    mse,psnr=batch_mse_psnr(d_batch)
+                    ssim=batch_ssim(d_batch)
+                    s=time.strftime('%Y-%m-%d %H:%M:%S:',time.localtime(time.time()))+"epoch="+str(step() / steps_per_epoch + 1 )+'step='+str(step())+' mse='+str(mse)+' psnr='+str(psnr)+' ssim='+str(ssim)+' gen_loss='+str(gen_loss.eval())+' disc_loss='+str(disc_loss.eval())
+                    print(s)
+                    f=open('info.train_'+name,'a')
+                    f.write(s+'\n')
+                    f.close()
+                    save()
+                if(step()%steps_per_epoch==0):
+                    output.outputdata(step()/steops_per_epoch , batch_size , filename , save_file , output_path+'/')
+        except tf.errors.OutOfRangeError:
+            print('[INFO] train finished')
+            save()
+        except KeyboardInterrupt:
+            print('[INFO] KeyboardInterrupt')
+            save()
+            print('[INFO] checkpoint save done')
     train(endpoint1,gen_train_step1,disc_train_step1)
-  #  train(endpoint2,gen_train_step2,disc_train_step2)
+   # train(endpoint2,gen_train_step2,disc_train_step2)
     print('trainning finished')
