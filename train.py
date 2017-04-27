@@ -25,7 +25,10 @@ srResNet_path='./save/srResNet'+name+'/'+"srResNet"
 log_steps=100
 num_epoch1=10
 num_epoch2=20
-save_path='save/srGAN'+name+'/'+"srGAN"
+save_path='save/srGAN'+name
+save_file=save_path+'/srGAN'
+if not os.path.exists(save_path):
+    os.mkdir(save_path)
 def read(filenames):
     file_names=open(filenames,'r').read().split('\n')
     file_names.pop( len(file_names) -1 )
@@ -75,18 +78,18 @@ disc_train_step1=tf.train.AdamOptimizer(learn_rate1).minimize(disc_loss,global_s
 config = tf.ConfigProto(allow_soft_placement=True , log_device_placement=False )
 config.gpu_options.allow_growth=True
 with tf.Session(config=config) as sess:
-    if not os.path.exists(save_path+'.meta'):
+    if not os.path.exists(save_file+'.meta'):
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         loader = tf.train.Saver(var_list=gen_var_list)
         loader.restore(sess,srResNet_path)
         saver=tf.train.Saver(var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
-        saver.save(sess,save_path)
+        saver.save(sess,save_file)
         print('saved')
     saver=tf.train.Saver(var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
-    saver.restore(sess,save_path)
+    saver.restore(sess,save_file)
     def save():
-        saver.save(sess,save_path)
+        saver.save(sess,save_file)
     sess.run(tf.local_variables_initializer())
     step=global_step.eval
     tf.train.start_queue_runners()
@@ -112,7 +115,7 @@ with tf.Session(config=config) as sess:
             sess.run(disc_step)
             sess.run(gen_step)
             if(step()%steps_per_epoch==0):
-                output.outputdata(step()/steops_per_epoch , batch_size , filename , save_path , './trainingoutput/'+name+'/')
+                output.outputdata(step()/steops_per_epoch , batch_size , filename , save_file , './trainingoutput/'+name+'/')
     train(endpoint1,gen_train_step1,disc_train_step1)
   #  train(endpoint2,gen_train_step2,disc_train_step2)
     print('trainning finished')

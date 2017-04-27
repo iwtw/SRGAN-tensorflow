@@ -22,7 +22,9 @@ name = sys.argv[1]
 if not os.path.exists('save'):
     os.mkdir('save')
 
-save_path='save/srResNet'+name+'/'+"srResNet"
+
+save_path='save/srResNet'+name
+save_file=save_path+'/srResNet'
 if not os.path.exists(save_path):
     os.mkdir(save_path)
 
@@ -59,13 +61,13 @@ config = tf.ConfigProto(allow_soft_placement=True , log_device_placement=False )
 config.gpu_options.allow_growth=True
 with tf.Session(config=config) as sess:
     
-    if not os.path.exists(save_path+'.meta'):
+    if not os.path.exists(save_file+'.meta'):
         sess.run(tf.local_variables_initializer())
         sess.run(tf.global_variables_initializer())
         saver=tf.train.Saver(var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
-        saver.save(sess,save_path)
+        saver.save(sess,save_file)
     saver=tf.train.Saver(var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
-    saver.restore(sess,save_path)
+    saver.restore(sess,save_file)
     sess.run(tf.local_variables_initializer())
 #    sess.run(tf.global_variables_initializer())
 #    print('local init done')
@@ -74,7 +76,7 @@ with tf.Session(config=config) as sess:
 #    print("minibatch:",sess.run(minibatch))
 #    print("result:",sess.run(result))
     def save():
-        saver.save(sess,save_path)
+        saver.save(sess,save_file)
     step=global_step.eval
 
     total_steps = steps_per_epoch * num_epoch
@@ -92,7 +94,7 @@ with tf.Session(config=config) as sess:
             f.close()
             save()
         if(step()%steps_per_epoch==0):
-            output.outputdata(step()/steps_per_epoch , batch_size , filenames ,  save_path , './pretrainingoutput/'+name+'/')
+            output.outputdata(step()/steps_per_epoch , batch_size , filenames ,  save_file , './pretrainingoutput/'+name+'/')
         sess.run(train_step)
 
 print('done')
