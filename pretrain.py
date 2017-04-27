@@ -58,10 +58,13 @@ with tf.device('/cpu:0'):
 resnet=srResNet.srResNet(rescaled)
 result=(tf.tanh(resnet.conv5)+1)*255/2
 
-dbatch=tf.concat([minibatch,result],0)
-MSE=tf.losses.mean_squared_error(minibatch,result)
+dbatch=tf.concat([tf.cast(minibatch,tf.float32),result],0)
+vgg=vgg19.Vgg19()
+vgg.build(dbatch)
+fmap=tf.split(vgg.conv2_2,2)
+content_loss=tf.losses.mean_squared_error(fmap[0],fmap[1])
 global_step=tf.Variable(0,name='global_step')
-train_step=tf.train.AdamOptimizer(learn_rate).minimize(MSE,global_step)
+train_step=tf.train.AdamOptimizer(learn_rate).minimize(content_loss,global_step)
 
 config = tf.ConfigProto(allow_soft_placement=True , log_device_placement=False )
 config.gpu_options.allow_growth=True

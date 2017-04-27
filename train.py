@@ -75,9 +75,9 @@ for x in gen_var_list:
 
 global_step=tf.Variable(0,trainable=0,name='global_step')
 gen_train_step1=tf.train.AdamOptimizer(learn_rate1).minimize(gen_loss,global_step,gen_var_list)
-#gen_train_step2=tf.train.AdamOptimizer(learn_rate2).minimize(gen_loss,global_step)
+gen_train_step2=tf.train.AdamOptimizer(learn_rate2).minimize(gen_loss,global_step)
 disc_train_step1=tf.train.AdamOptimizer(learn_rate1).minimize(disc_loss,global_step,disc_var_list)
-#disc_train_step2=tf.train.AdamOptimizer(learn_rate2).minimize(disc_loss,global_step)
+disc_train_step2=tf.train.AdamOptimizer(learn_rate2).minimize(disc_loss,global_step)
 
 config = tf.ConfigProto(allow_soft_placement=True , log_device_placement=False )
 config.gpu_options.allow_growth=True
@@ -106,7 +106,7 @@ with tf.Session(config=config) as sess:
     def train(endpoint,gen_step,disc_step):
         try:
             while step()<=endpoint:
-                for i in xrange(k)
+                for i in xrange(k):
                     sess.run(disc_step)
                 sess.run(gen_step)
                 if(step()%log_steps==0):
@@ -129,5 +129,5 @@ with tf.Session(config=config) as sess:
             save()
             print('[INFO] checkpoint save done')
     train(endpoint1,gen_train_step1,disc_train_step1)
-   # train(endpoint2,gen_train_step2,disc_train_step2)
+    train(endpoint2,gen_train_step2,disc_train_step2)
     print('trainning finished')
