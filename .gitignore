@@ -1,7 +1,11 @@
 save/
 data/
+training_output/
+pretraining_output/
 data*
 vgg19.npy
 vgg19.pyc
 testset_path.txt
 *.swp
+*pyc
+info*

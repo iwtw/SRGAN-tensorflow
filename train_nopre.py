@@ -28,9 +28,9 @@ srResNet_path='save/srResNet'+name+'/'+"srResNet"
 log_steps=100
 num_epoch1=10
 num_epoch2=20
-save_path='save/srGAN'+name
-save_file=save_path+'/srGAN'
-output_path='./training_output/'+name
+save_path='save/srGANno'+name
+save_file=save_path+'/srGANno'
+output_path='./training_no_preoutput/'+name
 if not os.path.exists(save_path):
     os.mkdir(save_path)
 if not os.path.exists(output_path):
@@ -54,7 +54,7 @@ def read(filenames):
 with tf.device('/cpu:0'):
     steps_per_epoch,minibatch,resized=read(filenames)
 resnet=srResNet.srResNet(resized*2.0-1)
-result=resnet.out
+result=resnet.conv5
 gen_var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
 
 
@@ -91,8 +91,6 @@ with tf.Session(config=config) as sess:
     if not os.path.exists(save_file+'.meta'):
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
-        loader = tf.train.Saver(var_list=gen_var_list)
-        loader.restore(sess,srResNet_path)
         saver=tf.train.Saver(var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
         saver.save(sess,save_file)
 

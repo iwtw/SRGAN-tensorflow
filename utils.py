@@ -20,6 +20,10 @@ def leaky_relu(x,alpha=0.1,name='lrelu'):
      with tf.name_scope(name):
          x=tf.maximum(x,alpha*x)
          return x
+def relu( x , name='relu'  ):
+    with tf.name_scope(name):
+        x = tf.maximum( x , 0)
+        return x
 def batch_mse_psnr(dbatch):
     im1,im2=np.split(dbatch,2)
     mse=((im1-im2)**2).mean(axis=(1,2))
